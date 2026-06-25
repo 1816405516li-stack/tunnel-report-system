@@ -1,5 +1,5 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-streamlit run app.py
+py -3 -m streamlit run app.py
 pause
