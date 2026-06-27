@@ -17,6 +17,7 @@ from generators.monthly_reports.common import (
     GROUPED_CATEGORIES,
     MonthlyGenerationError,
     ensure_templates_exist,
+    generation_progress_message,
     iter_tunnels,
     read_csv,
 )
@@ -84,7 +85,7 @@ def generate_monthly_reports(
     for category in categories:
         if category == "total":
             category_stats[category] = generate_total_report(run_dir, month, datasets[category], artifacts)
-            advance("总月报表生成完成")
+            advance(generation_progress_message("total"))
         elif category == "single_tunnel":
             category_stats[category] = generate_single_tunnel_reports(
                 run_dir, month, datasets[category], manifest, artifacts, advance

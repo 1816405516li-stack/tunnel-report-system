@@ -16,6 +16,7 @@ from generators.monthly_reports.common import (
     apply_generated_range_style,
     filter_by_tunnel,
     fill_table_rows,
+    generation_progress_message,
     iter_tunnels,
     month_day,
     replace_cell_text,
@@ -98,7 +99,7 @@ def generate_single_tunnel_reports(
             saved_workbook.save(path)
             verify_workbook(path)
         created.append(path)
-        advance(f"{CATEGORY_LABELS['single_tunnel']}：{tunnel_name} 生成完成")
+        advance(generation_progress_message("single_tunnel", tunnel_name))
 
     artifacts["single_tunnel"] = str(run_dir)
     return {"label": CATEGORY_LABELS["single_tunnel"], "file_count": len(created), "row_count": int(row_count), "ready": True}

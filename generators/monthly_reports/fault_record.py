@@ -16,6 +16,7 @@ from generators.monthly_reports.common import (
     chinese_deadline_datetime,
     chinese_datetime,
     filter_by_tunnel,
+    generation_progress_message,
     iter_tunnels,
     save_and_verify,
     truthy,
@@ -57,7 +58,7 @@ def generate_fault_record_reports(
         path = tunnel_dir(run_dir, tunnel_name, manifest) / "隧道机电设备故障记录单.xlsx"
         save_and_verify(workbook, path, TEMPLATES["fault_record"], "fault_record")
         created.append(path)
-        advance(f"{CATEGORY_LABELS['fault_record']}：{tunnel_name} 生成完成")
+        advance(generation_progress_message("fault_record", tunnel_name))
 
     artifacts["fault_record"] = str(run_dir)
     return {"label": CATEGORY_LABELS["fault_record"], "file_count": len(created), "row_count": int(row_count), "ready": True}

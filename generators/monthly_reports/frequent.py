@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from calendar import monthrange
+import hashlib
 from pathlib import Path
+import random
 from typing import Callable
 
 import pandas as pd
@@ -16,6 +19,7 @@ from generators.monthly_reports.common import (
     TEMPLATES,
     apply_generated_font,
     filter_by_tunnel,
+    generation_progress_message,
     iter_tunnels,
     replace_cell_text,
     report_date_text,
@@ -30,6 +34,14 @@ from generators.monthly_reports.common import (
 
 FREQUENT_WEEKLY_ROWS = (34, 176, 189, 199)
 FREQUENT_WEEKLY_COLUMNS = (5, 6, 7, 8, 9)
+NATURAL_DAY_GRID_DAYS = 31
+NATURAL_DAY_GRID_WIDTH = 5
+NATURAL_DAY_GRID_START = (1, 2, 3, 4, 5)
+JET_FAN_MAINTENANCE_CELL = "K133"
+JET_FAN_DURATION_MINUTES = 15
+JET_FAN_TIME_STEP_MINUTES = 5
+JET_FAN_MORNING_WINDOW = (8 * 60, 12 * 60)
+JET_FAN_AFTERNOON_WINDOW = (14 * 60, 18 * 60)
 
 
 def generate_frequent_reports(
@@ -62,7 +74,9 @@ def generate_frequent_reports(
         tunnel_data = filter_by_tunnel(data, tunnel_name)
         row_count += len(tunnel_data)
         weekly_dates = weekly_dates_from_text(tunnel_data["周检日期"].iloc[0]) if not tunnel_data.empty else []
+        fill_natural_day_cells(sheet, month)
         fill_weekly_cells(sheet, weekly_dates)
+        fill_jet_fan_maintenance(sheet, month, tunnel_name)
         fill_frequent_abnormal(sheet, tunnel_data, tunnel_name)
         if tunnel_name == "高且隧道":
             normalize_frequent_merges(sheet, tunnel_name)
@@ -88,7 +102,7 @@ def generate_frequent_reports(
             saved_workbook.save(path)
             verify_workbook(path)
         created.append(path)
-        advance(f"{CATEGORY_LABELS['frequent']}：{tunnel_name} 生成完成")
+        advance(generation_progress_message("frequent", tunnel_name))
 
     artifacts["frequent"] = str(run_dir)
     return {"label": CATEGORY_LABELS["frequent"], "file_count": len(created), "row_count": int(row_count), "ready": True}
@@ -108,15 +122,76 @@ def fill_frequent_abnormal(sheet: Worksheet, data: pd.DataFrame, tunnel_name: st
 
 def fill_weekly_cells(sheet: Worksheet, weekly_dates: list[str]) -> None:
     """Fill all weekly inspection mini-grids used by the frequent template."""
-    for row in (50, 51, 64, 65, 79, 80, 94, 95, 108, 109):
-        for column in FREQUENT_WEEKLY_COLUMNS:
-            set_generated_value(sheet.cell(row, column), "/", 10)
-    set_generated_value(sheet["K133"], "", 10)
     for row in FREQUENT_WEEKLY_ROWS:
         for index, column in enumerate(FREQUENT_WEEKLY_COLUMNS):
             value = weekly_dates[index] if index < len(weekly_dates) else "/"
             set_generated_value(sheet.cell(row, column), value, 10)
             set_generated_value(sheet.cell(row + 1, column), "√" if index < len(weekly_dates) else "/", 10)
+
+
+def fill_natural_day_cells(sheet: Worksheet, month: str) -> None:
+    """Fill every natural-day 1-31 grid according to the real month length."""
+    year, month_number = [int(part) for part in month.split("-")]
+    days_in_month = monthrange(year, month_number)[1]
+
+    for start_row, start_column in find_natural_day_grids(sheet):
+        for day in range(1, NATURAL_DAY_GRID_DAYS + 1):
+            block_row = start_row + ((day - 1) // NATURAL_DAY_GRID_WIDTH) * 2
+            column = start_column + ((day - 1) % NATURAL_DAY_GRID_WIDTH)
+            value = day if day <= days_in_month else "/"
+            mark = "√" if day <= days_in_month else "/"
+            set_generated_value(sheet.cell(block_row, column), value, 10)
+            set_generated_value(sheet.cell(block_row + 1, column), mark, 10)
+
+
+def find_natural_day_grids(sheet: Worksheet) -> list[tuple[int, int]]:
+    """Find 5-column natural-day grids whose first row is 1, 2, 3, 4, 5."""
+    grids: list[tuple[int, int]] = []
+    for row in range(1, sheet.max_row + 1):
+        for column in range(1, sheet.max_column - NATURAL_DAY_GRID_WIDTH + 2):
+            values = tuple(sheet.cell(row, column + offset).value for offset in range(NATURAL_DAY_GRID_WIDTH))
+            if values == NATURAL_DAY_GRID_START:
+                grids.append((row, column))
+    return grids
+
+
+def fill_jet_fan_maintenance(sheet: Worksheet, month: str, tunnel_name: str) -> None:
+    """Fill the jet-fan maintenance cell with one morning and one afternoon run."""
+    set_generated_value(sheet[JET_FAN_MAINTENANCE_CELL], "\n".join(jet_fan_maintenance_lines(month, tunnel_name)), 10)
+
+
+def jet_fan_maintenance_lines(month: str, tunnel_name: str) -> list[str]:
+    """Build stable pseudo-random jet-fan run records for a tunnel month."""
+    year, month_number = [int(part) for part in month.split("-")]
+    days_in_month = monthrange(year, month_number)[1]
+    rng = random.Random(_stable_random_seed(month, tunnel_name, "jet-fan-maintenance"))
+    morning_day, afternoon_day = rng.sample(range(1, days_in_month + 1), 2)
+    morning_start = _random_time_start(rng, *JET_FAN_MORNING_WINDOW)
+    afternoon_start = _random_time_start(rng, *JET_FAN_AFTERNOON_WINDOW)
+    return [
+        _jet_fan_line(month_number, morning_day, morning_start),
+        _jet_fan_line(month_number, afternoon_day, afternoon_start),
+    ]
+
+
+def _random_time_start(rng: random.Random, window_start: int, window_end: int) -> int:
+    latest_start = window_end - JET_FAN_DURATION_MINUTES
+    step_count = (latest_start - window_start) // JET_FAN_TIME_STEP_MINUTES
+    return window_start + rng.randint(0, step_count) * JET_FAN_TIME_STEP_MINUTES
+
+
+def _jet_fan_line(month_number: int, day: int, start_minutes: int) -> str:
+    end_minutes = start_minutes + JET_FAN_DURATION_MINUTES
+    return f"{month_number}月{day}日 {_format_minutes(start_minutes)}-{_format_minutes(end_minutes)} 开启风机15分钟"
+
+
+def _format_minutes(minutes: int) -> str:
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def _stable_random_seed(*parts: str) -> int:
+    digest = hashlib.sha256("|".join(parts).encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big")
 
 
 def normalize_frequent_merges(sheet: Worksheet, tunnel_name: str) -> None:

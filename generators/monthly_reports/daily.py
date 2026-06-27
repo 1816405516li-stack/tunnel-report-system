@@ -16,6 +16,7 @@ from generators.monthly_reports.common import (
     days_in_month,
     delete_rows_after,
     filter_by_tunnel,
+    generation_progress_message,
     iter_tunnels,
     numbered_lines,
     save_and_verify,
@@ -75,7 +76,7 @@ def generate_daily_reports(
         path = tunnel_dir(run_dir, tunnel_name, manifest) / "机电日常巡查记录表.xlsx"
         save_and_verify(workbook, path, TEMPLATES["daily"], "daily")
         created.append(path)
-        advance(f"{CATEGORY_LABELS['daily']}：{tunnel_name} 生成完成")
+        advance(generation_progress_message("daily", tunnel_name))
 
     artifacts["daily"] = str(run_dir)
     return {"label": CATEGORY_LABELS["daily"], "file_count": len(created), "row_count": int(row_count), "ready": True}

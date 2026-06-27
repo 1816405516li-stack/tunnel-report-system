@@ -369,4 +369,13 @@ def short_tunnel_name(tunnel_name: str) -> str:
 
 
 def tunnel_display_name(tunnel_name: str) -> str:
-    return TUNNEL_DISPLAY_NAMES.get(tunnel_name, tunnel_name)
+    normalized_name = " ".join(str(tunnel_name or "").split())
+    return TUNNEL_DISPLAY_NAMES.get(normalized_name, normalized_name)
+
+
+def generation_progress_message(category: str, tunnel_name: str | None = None) -> str:
+    label = CATEGORY_LABELS.get(category, str(category))
+    display_name = tunnel_display_name(tunnel_name or "")
+    if display_name:
+        return f"{display_name}：{label}生成完成"
+    return f"{label}生成完成"

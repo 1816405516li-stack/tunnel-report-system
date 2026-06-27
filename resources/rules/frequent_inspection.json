@@ -3,6 +3,17 @@
   "source": "机电设施故障月报表(总表)数据",
   "dataset_file": "frequent_inspection_records.csv",
   "purpose": "准备经常性检查表的周检日期和25日异常记录。",
+  "natural_day_grid_rule": {
+    "grid": "7x5",
+    "base": "目标月份真实自然日天数",
+    "fill": "1日至月底日期格写日期数字，下方格写√",
+    "extra_cells": "超过月底的日期格和下方格都写/",
+    "examples": {
+      "二月平年": "1-28写日期和√，29-31写/",
+      "三十天月份": "1-30写日期和√，31写/",
+      "三十一天月份": "1-31全部写日期和√"
+    }
+  },
   "weekly_grid_rule": {
     "grid": "2x5",
     "base": "当月每个周一所在周",
@@ -10,6 +21,15 @@
     "workdays": ["周一", "周二", "周三", "周四", "周五"],
     "fill_count_equals_mondays_in_month": true,
     "leave_extra_cell_blank_when_only_four_mondays": true
+  },
+  "jet_fan_maintenance_rule": {
+    "cell": "K133",
+    "frequency": "每月填写两个自然日记录",
+    "morning_window": "08:00-12:00之间随机选择连续15分钟",
+    "afternoon_window": "14:00-18:00之间随机选择连续15分钟",
+    "duration_minutes": 15,
+    "text_template": "M月D日 HH:MM-HH:MM 开启风机15分钟",
+    "stability": "同一月份、同一隧道重复生成时保持一致"
   },
   "abnormal_rule": {
     "inspection_day": 25,
