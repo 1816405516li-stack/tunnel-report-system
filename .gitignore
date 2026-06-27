@@ -73,9 +73,23 @@ tempCodeRunnerFile.py
 
 # Project runtime data
 logs/
-workspace/
-outputs/
 backups/
+
+workspace/**
+!workspace/
+!workspace/.gitkeep
+!workspace/cleaned/
+!workspace/cleaned/.gitkeep
+!workspace/preview/
+!workspace/preview/.gitkeep
+!workspace/temp/
+!workspace/temp/.gitkeep
+!workspace/uploads/
+!workspace/uploads/.gitkeep
+
+outputs/**
+!outputs/
+!outputs/.gitkeep
 
 # Local generated report folders
 永新东养护站隧道机电月报*/

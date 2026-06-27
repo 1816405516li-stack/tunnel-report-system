@@ -18,4 +18,4 @@
 
 ## 本地运行数据
 
-`workspace/` 和 `outputs/` 只保存本机运行过程和生成成果，不进入 GitHub。
+`workspace/` 和 `outputs/` 只保存本机运行过程和生成成果。仓库只上传空目录占位文件，实际数据不进入 GitHub。
