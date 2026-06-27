@@ -1,0 +1,28 @@
+{
+  "table": "机电日常巡查记录表",
+  "source": "机电设施故障月报表(总表)数据",
+  "dataset_file": "daily_inspection_records.csv",
+  "purpose": "把每条故障展开成日常巡查可填充的日期级记录。",
+  "rules": {
+    "one_record_per_active_fault_day": true,
+    "active_from": "故障日期",
+    "active_until": ["修复时间", "月末"],
+    "include_repair_day": true,
+    "before_repair_measure": "已报维护组，待修复",
+    "repair_day_measure": "处置措施",
+    "description_template": "{设备名称}（{故障地点}）{故障现象}",
+    "remove_duplicate_location_from_fault_text": true
+  },
+  "output_columns": [
+    "隧道名称",
+    "隧道编码",
+    "检查日期",
+    "检查项目",
+    "设备名称",
+    "故障地点",
+    "养护单位检查情况描述",
+    "采取措施",
+    "故障编号",
+    "源表行号"
+  ]
+}

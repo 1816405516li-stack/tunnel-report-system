@@ -1,1 +1,2 @@
-"""Excel report generator package."""
+"""Workbook generation entry points."""
+

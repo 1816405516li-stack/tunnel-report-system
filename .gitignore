@@ -62,6 +62,7 @@ dmypy.json
 
 # Notebooks and IDEs
 .ipynb_checkpoints/
+.vscode/
 .spyderproject
 .spyproject
 .ropeproject
@@ -94,3 +95,4 @@ backups/**
 # OS files
 .DS_Store
 Thumbs.db
+~$*

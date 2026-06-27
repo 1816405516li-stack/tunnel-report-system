@@ -10,7 +10,7 @@ from config.settings import (
 
 
 def ensure_base_directories():
-    """Placeholder for checking required directories."""
+    """Return the base directories used by the application."""
     return {
         "resources": RESOURCES_DIR,
         "workspace": WORKSPACE_DIR,

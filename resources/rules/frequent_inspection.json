@@ -1,0 +1,31 @@
+{
+  "table": "机电经常性检查记录表",
+  "source": "机电设施故障月报表(总表)数据",
+  "dataset_file": "frequent_inspection_records.csv",
+  "purpose": "准备经常性检查表的周检日期和25日异常记录。",
+  "weekly_grid_rule": {
+    "grid": "2x5",
+    "base": "当月每个周一所在周",
+    "choose_only_workday": true,
+    "workdays": ["周一", "周二", "周三", "周四", "周五"],
+    "fill_count_equals_mondays_in_month": true,
+    "leave_extra_cell_blank_when_only_four_mondays": true
+  },
+  "abnormal_rule": {
+    "inspection_day": 25,
+    "include": [
+      "25日当天发生的故障",
+      "25日及以前发生且25日之后才修复的故障",
+      "25日及以前发生且截至25日仍未修复的故障"
+    ],
+    "exclude": [
+      "25日以前已修复且不是25日当天发生的故障",
+      "25日以后才发生的故障",
+      "其他隧道的故障"
+    ]
+  },
+  "description_template": {
+    "异常描述": "{M月D日}{故障地点}{设备名称}{故障现象}",
+    "养护措施": "{M月D日}{处置措施}"
+  }
+}

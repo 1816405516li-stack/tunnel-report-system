@@ -1,0 +1,33 @@
+{
+  "table": "隧道机电设备故障记录单",
+  "source": "机电设施故障月报表(总表)数据",
+  "dataset_file": "fault_record_forms.csv",
+  "purpose": "把每条故障映射到后续故障记录单模板字段。",
+  "generation_scope": {
+    "one_sheet_per_fault": true,
+    "sheet_count_equals_fault_count": true
+  },
+  "field_mapping": {
+    "A2": "隧道名称 + 隧道编码",
+    "C3": "故障时间",
+    "E3": "报修时间",
+    "C4": "故障地点",
+    "E4": "报修人",
+    "C5": "设备名称",
+    "E7": "维修人员",
+    "C6": "故障现象",
+    "C8": "故障原因和处置措施",
+    "C10:E12": "备件使用及更换情况"
+  },
+  "spare_part_rule": {
+    "fill_only_when_replacement_exists": true,
+    "part_name_sources": ["更换配件名称", "处置措施中的更换片段"],
+    "quantity_source": "更换设备台数",
+    "default_quantity_when_replacement_text_exists": 1
+  },
+  "result_rule": {
+    "repaired_with_replacement": ["已修复", "更换配件"],
+    "repaired_without_replacement": ["已修复"],
+    "unrepaired_or_processing": []
+  }
+}

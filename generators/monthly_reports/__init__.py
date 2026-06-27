@@ -1,6 +1,6 @@
-"""Backward-compatible imports for monthly report generation."""
+"""Monthly tunnel report workbook generation package."""
 
-from generators.monthly_reports import (
+from generators.monthly_reports.orchestrator import (
     CATEGORY_LABELS,
     DEFAULT_CATEGORIES,
     MonthlyGenerationError,

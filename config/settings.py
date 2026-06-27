@@ -15,4 +15,4 @@ LOGS_DIR = PROJECT_ROOT / "logs"
 BACKUPS_DIR = PROJECT_ROOT / "backups"
 DOCS_DIR = PROJECT_ROOT / "docs"
 
-APP_NAME = "隧道机电月报系统"
+APP_NAME = "隧道机电月报自动化系统"

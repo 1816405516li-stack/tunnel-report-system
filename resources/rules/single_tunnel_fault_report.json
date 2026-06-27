@@ -1,0 +1,24 @@
+{
+  "table": "机电设施故障月报表(分隧道表)",
+  "source": "机电设施故障月报表(总表)数据",
+  "dataset_file": "single_tunnel_fault_reports.csv",
+  "purpose": "按隧道拆分总表数据，供后续每座隧道生成一份分隧道月报。",
+  "generation_scope": {
+    "one_workbook_per_tunnel": true,
+    "include_empty_tunnel": true,
+    "empty_tunnel_summary_values": {
+      "故障设备数量": 0,
+      "更换设备数量": 0
+    }
+  },
+  "rules": {
+    "do_not_mix_other_tunnels": true,
+    "keep_total_report_text": true,
+    "summary_count_from_current_tunnel_rows": true
+  },
+  "extra_columns": [
+    "是否空表",
+    "故障设备数量",
+    "更换设备数量"
+  ]
+}
