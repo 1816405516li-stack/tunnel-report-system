@@ -72,25 +72,14 @@ tempCodeRunnerFile.py
 .streamlit/secrets.toml
 
 # Project runtime data
-logs/**
-!logs/
-!logs/**/
-!logs/**/.gitkeep
+logs/
+workspace/
+outputs/
+backups/
 
-workspace/**
-!workspace/
-!workspace/**/
-!workspace/**/.gitkeep
-
-outputs/**
-!outputs/
-!outputs/**/
-!outputs/**/.gitkeep
-
-backups/**
-!backups/
-!backups/**/
-!backups/**/.gitkeep
+# Local generated report folders
+永新东养护站隧道机电月报*/
+模板/
 
 # OS files
 .DS_Store
