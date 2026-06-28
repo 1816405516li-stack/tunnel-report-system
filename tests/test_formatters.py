@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from generators.monthly_reports.common import generation_progress_message
+from pages.home import render_dataset_outputs
 from pages.home_formatters import date_range_metric_html, format_metric_date
 
 
@@ -37,6 +39,25 @@ class GenerationProgressMessageTests(unittest.TestCase):
 
     def test_total_message_has_no_tunnel_prefix(self) -> None:
         self.assertEqual(generation_progress_message("total"), "总月报表生成完成")
+
+
+class DatasetOutputRenderTests(unittest.TestCase):
+    def test_render_dataset_outputs_uses_file_names(self) -> None:
+        result = {
+            "processed_dir": r"C:\tmp\processed",
+            "files": {
+                "机电设施故障月报表_总表_数据": r"C:\tmp\processed\monthly_fault_report_total.csv",
+                "处理清单": r"C:\tmp\processed\manifest.json",
+            },
+        }
+        captured: list[str] = []
+
+        with patch("pages.home.html", side_effect=captured.append):
+            render_dataset_outputs(result)
+
+        output = "".join(captured)
+        self.assertIn("monthly_fault_report_total.csv", output)
+        self.assertNotIn("manifest.json", output)
 
 
 if __name__ == "__main__":
