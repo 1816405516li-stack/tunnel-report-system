@@ -8,6 +8,7 @@ standardized from source facts, not from one historical workbook.
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
@@ -15,7 +16,6 @@ import pandas as pd
 
 
 COMMA = "\u3001"
-TERMINAL_PUNCTUATION = "\u3002\uff1b;\uff0c, "
 JOIN_PUNCTUATION = "\uff0c"
 PILE_RE = re.compile(r"(?<![A-Z])([YZ]?K)\s*(\d{1,4})\s*\+\s*(\d{1,4})", re.IGNORECASE)
 
@@ -56,8 +56,24 @@ def normalize_report_text(
     output = re.sub(policy.duplicate_separators, COMMA, output)
     output = re.sub(r"\s+", " ", output).strip()
     if strip_terminal_punctuation:
-        output = output.rstrip(TERMINAL_PUNCTUATION)
+        output = _strip_edge_non_text(output)
     return output
+
+
+def _strip_edge_non_text(value: str) -> str:
+    """Strip leading/trailing punctuation or symbols without enumerating them."""
+    start = 0
+    end = len(value)
+    while start < end and not _is_text_boundary(value[start]):
+        start += 1
+    while end > start and not _is_text_boundary(value[end - 1]):
+        end -= 1
+    return value[start:end].strip()
+
+
+def _is_text_boundary(char: str) -> bool:
+    category = unicodedata.category(char)
+    return category.startswith("L") or category.startswith("N")
 
 
 def build_fault_phenomenon(

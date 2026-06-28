@@ -95,7 +95,7 @@ outputs/**
 永新东养护站隧道机电月报*/
 模板/
 
-# OS files
+# OS and Office files
 .DS_Store
 Thumbs.db
 ~$*
