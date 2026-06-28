@@ -47,6 +47,68 @@ class StandardFaultQualityTests(unittest.TestCase):
         self.assertIn("同一源表行号重复", issue_names)
         self.assertIn("原因及处理疑似重复", issue_names)
 
+    def test_same_device_same_day_different_fault_content_is_not_duplicate(self) -> None:
+        data = pd.DataFrame(
+            [
+                {
+                    "源表行号": "10",
+                    "隧道名称": "永井隧道",
+                    "故障日期": "2026-07-03",
+                    "故障地点": "YK12+345",
+                    "设备名称": "工业以太网交换机",
+                    "故障现象": "通信中断",
+                    "故障原因": "电源模块异常",
+                    "处置措施": "更换电源模块",
+                },
+                {
+                    "源表行号": "11",
+                    "隧道名称": "永井隧道",
+                    "故障日期": "2026-07-03",
+                    "故障地点": "YK12+345",
+                    "设备名称": "工业以太网交换机",
+                    "故障现象": "端口掉线",
+                    "故障原因": "光纤接头松动",
+                    "处置措施": "重新熔接并固定接头",
+                },
+            ]
+        )
+
+        issue_names = {item["检查项"] for item in build_quality_issues(data)}
+
+        self.assertNotIn("疑似重复故障记录", issue_names)
+
+    def test_same_device_same_day_same_fault_content_is_duplicate(self) -> None:
+        data = pd.DataFrame(
+            [
+                {
+                    "源表行号": "20",
+                    "隧道名称": "永井隧道",
+                    "故障日期": "2026-07-03",
+                    "故障地点": "YK12+345",
+                    "设备名称": "工业以太网交换机",
+                    "故障现象": "通信中断",
+                    "故障原因": "电源模块异常",
+                    "处置措施": "更换电源模块",
+                },
+                {
+                    "源表行号": "21",
+                    "隧道名称": "永井隧道",
+                    "故障日期": "2026-07-03",
+                    "故障地点": " YK12 + 345 ",
+                    "设备名称": " 工业以太网交换机 ",
+                    "故障现象": "通信中断",
+                    "故障原因": "电源模块异常",
+                    "处置措施": "更换电源模块",
+                },
+            ]
+        )
+
+        issues = build_quality_issues(data)
+        duplicate_issues = [item for item in issues if item["检查项"] == "疑似重复故障记录"]
+
+        self.assertEqual(1, len(duplicate_issues))
+        self.assertEqual(2, duplicate_issues[0]["数量"])
+
 
 if __name__ == "__main__":
     unittest.main()

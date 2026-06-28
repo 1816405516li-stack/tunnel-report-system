@@ -64,10 +64,10 @@ def build_quality_issues(data: pd.DataFrame) -> list[dict[str, Any]]:
         source_rows = data["源表行号"].astype(str).str.strip()
         add_issue("同一源表行号重复", source_rows.duplicated(keep=False) & source_rows.ne(""), "检查是否重复解析同一原始行。")
 
-    duplicate_columns = ["隧道名称", "设备名称", "故障日期"]
+    duplicate_columns = ["隧道名称", "设备名称", "故障日期", "故障地点", "故障现象", "故障原因", "处置措施"]
     if all(column in data.columns for column in duplicate_columns):
-        duplicate_mask = data.duplicated(subset=duplicate_columns, keep=False)
-        add_issue("同隧道同设备同日疑似重复", duplicate_mask, "检查是否为重复故障或同设备多次维修。")
+        duplicate_mask = _build_exact_duplicate_mask(data, duplicate_columns)
+        add_issue("疑似重复故障记录", duplicate_mask, "同隧道、同设备、同日且故障内容一致，请检查是否重复解析。")
 
     return issues
 
@@ -99,3 +99,14 @@ def has_repeated_clause(value: object) -> bool:
         return False
     parts = [part.strip() for part in re.split(r"[，,；;。]+", text) if part.strip()]
     return len(parts) != len(set(parts))
+
+
+def _build_exact_duplicate_mask(data: pd.DataFrame, columns: list[str]) -> pd.Series:
+    normalized = data[columns].apply(lambda column: column.map(_normalize_duplicate_part))
+    has_complete_key = normalized.ne("").all(axis=1)
+    duplicate_key = normalized.agg("|".join, axis=1)
+    return has_complete_key & duplicate_key.duplicated(keep=False)
+
+
+def _normalize_duplicate_part(value: object) -> str:
+    return re.sub(r"\s+", "", str(value or "").strip())
