@@ -8,6 +8,13 @@ from typing import Any
 
 import pandas as pd
 
+from core.repair_orders.report_text import (
+    ReportTextPolicy,
+    build_fault_phenomenon,
+    combine_reason_and_action as combine_report_reason_and_action,
+    normalize_report_text as normalize_report_text_value,
+)
+
 
 PILE_RE = re.compile(r"(?<![A-Z])([YZ]?K)\s*(\d{1,4})\s*\+\s*(\d{1,4})", re.IGNORECASE)
 TEXT_REPLACEMENTS = {
@@ -47,24 +54,16 @@ def text(value: Any) -> str:
 
 def normalize_report_text(value: Any, strip_terminal_punctuation: bool = True) -> str:
     """Normalize source wording used in final report cells."""
-    output = text(value)
-    for old, new in TEXT_REPLACEMENTS.items():
-        output = output.replace(old, new)
-    output = output.replace("++", "+")
-    output = re.sub(r"[、，,]{2,}", "、", output)
-    output = output.strip(" \t\r\n")
-    if strip_terminal_punctuation:
-        output = output.rstrip("。；;，, ")
-    return output
+    return normalize_report_text_value(
+        value,
+        strip_terminal_punctuation=strip_terminal_punctuation,
+        policy=ReportTextPolicy(replacements=TEXT_REPLACEMENTS),
+    )
 
 
 def combine_reason_and_action(reason: Any, action: Any) -> str:
     """Return the combined reason-and-action wording used outside the total report."""
-    reason_text = normalize_report_text(reason)
-    action_text = normalize_report_text(action)
-    if reason_text and action_text and reason_text not in action_text:
-        return f"{reason_text}，{action_text}"
-    return action_text or reason_text
+    return combine_report_reason_and_action(reason, action, policy=ReportTextPolicy(replacements=TEXT_REPLACEMENTS))
 
 
 def to_datetime(value: Any) -> datetime | None:
@@ -140,12 +139,14 @@ def extract_fault_location(description: Any, pile_number: Any, direction: Any) -
 
 def make_fault_summary(tunnel_name: str, fault_location: str, description: Any, device_name: str) -> str:
     """Create concise monthly-report fault text without repeating tunnel/location."""
-    summary = normalize_report_text(description)
-    if tunnel_name:
-        summary = re.sub(re.escape(tunnel_name) + r"(?!、)", "", summary)
-    summary = normalize_report_text(summary)
-    summary = _prefix_location_when_needed(fault_location, summary)
-    return summary or f"{device_name}故障"
+    return build_fault_phenomenon(
+        tunnel_name=tunnel_name,
+        fault_location=fault_location,
+        description=description,
+        device_name=device_name,
+        known_tunnel_names=KNOWN_TUNNEL_NAMES,
+        policy=ReportTextPolicy(replacements=TEXT_REPLACEMENTS),
+    )
 
 
 def extract_part_name(handling: Any) -> str:
@@ -197,25 +198,3 @@ def _direction_prefix(direction: str | None) -> str:
     if any(word in cleaned for word in ("上行", "左洞", "左幅", "左")) or upper in {"Z", "ZK"}:
         return "ZK"
     return "ZK"
-
-
-def _prefix_location_when_needed(fault_location: str, summary: str) -> str:
-    if not fault_location or not summary or PILE_RE.search(summary):
-        return summary
-    exact_or_suffix = (
-        "视频图像离线",
-        "情报板故障",
-        "紧急电话离线",
-        "紧急电话广播离线",
-        "给水管线漏水",
-        "车行横洞卷帘门故障",
-        "射流风机故障",
-        "车道指示器故障",
-    )
-    if summary in exact_or_suffix:
-        return f"{fault_location}{summary}"
-    return summary
-
-
-def _mentions_multiple_tunnels(value: str) -> bool:
-    return sum(1 for tunnel_name in KNOWN_TUNNEL_NAMES if tunnel_name in value) > 1

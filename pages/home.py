@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import streamlit as st
 
 from generators.monthly_report import DEFAULT_CATEGORIES
 from pages.about_system import render_about_system_page
+from pages.rule_center import render_rule_center_page
 from pages.run_logs import render_run_logs_page
+from pages.standard_fault_preview import render_standard_fault_preview
 from pages.home_formatters import date_range_metric_html
 from pages.home_actions import (
     get_fault_result,
@@ -26,15 +26,17 @@ from pages.home_actions import (
 from pages.home_styles import CSS
 
 
-
-MONTHLY_GENERATION_ACTIONS = [
-    ("total", "生成总月报表"),
-    ("single_tunnel", "生成单隧道月报表"),
-    ("daily", "生成日常巡查记录表"),
-    ("frequent", "生成经常性检查记录表"),
-    ("fault_record", "生成设备故障记录单"),
-    ("all", "一键生成全部月报文件"),
-]
+UI_STATE_VERSION = "2026-06-28-standard-fault-preview-dialog-v1"
+STALE_UI_KEYS = (
+    "rule_center_field_source_table",
+    "rule_center_field_source_table_v2",
+    "show_standard_fault_preview",
+    "gen_monthly_total",
+    "gen_monthly_single_tunnel",
+    "gen_monthly_daily",
+    "gen_monthly_frequent",
+    "gen_monthly_fault_record",
+)
 
 
 def render_flow(result: dict | None, has_upload: bool) -> None:
@@ -113,6 +115,10 @@ def render_dataset_outputs(result: dict | None) -> None:
 
 
 def init_page_state() -> None:
+    if st.session_state.get("_ui_state_version") != UI_STATE_VERSION:
+        for key in STALE_UI_KEYS:
+            st.session_state.pop(key, None)
+        st.session_state["_ui_state_version"] = UI_STATE_VERSION
     if "power_price_confirmed" not in st.session_state:
         st.session_state["power_price_confirmed"] = 0.85
     if "power_price_input" not in st.session_state:
@@ -137,12 +143,32 @@ def run_logs_dialog() -> None:
         st.rerun()
 
 
+@st.dialog("规则中心", width="large")
+def rule_center_dialog() -> None:
+    render_rule_center_page()
+    if st.button("关闭", key="close_rule_center", width="stretch"):
+        st.session_state["active_title_panel"] = None
+        st.rerun()
+
+
+@st.dialog("标准故障明细预览", width="large")
+def standard_fault_preview_dialog() -> None:
+    render_standard_fault_preview(get_fault_result())
+    if st.button("关闭", key="close_standard_fault_preview", width="stretch"):
+        st.session_state["active_title_panel"] = None
+        st.rerun()
+
+
 def render_requested_panel_dialog() -> None:
     panel = st.session_state.pop("active_title_panel", None)
     if panel == "about-system":
         about_system_dialog()
     elif panel == "run-logs":
         run_logs_dialog()
+    elif panel == "rule-center":
+        rule_center_dialog()
+    elif panel == "standard-fault-preview":
+        standard_fault_preview_dialog()
 
 
 def render_title_action_bar() -> None:
@@ -153,9 +179,9 @@ def render_title_action_bar() -> None:
                 st.session_state.pop("active_title_panel", None)
                 show_placeholder("模板管理")
         with actions[1]:
-            if st.button("☷\n规则配置", key="top_rule_config", width="stretch"):
-                st.session_state.pop("active_title_panel", None)
-                show_placeholder("规则配置")
+            if st.button("☷\n规则中心", key="top_rule_config", width="stretch"):
+                st.session_state["active_title_panel"] = "rule-center"
+                st.rerun()
         with actions[2]:
             if st.button("▤\n系统日志", key="top_run_logs", width="stretch"):
                 st.session_state["active_title_panel"] = "run-logs"
@@ -327,7 +353,6 @@ def render_power_sections() -> None:
                 """
             )
 
-
 def render_generation_sections(fault_result: dict | None) -> dict | None:
     html('<div class="lower-sections">')
     lower_left, lower_right = st.columns([1, 1], gap="small")
@@ -336,26 +361,27 @@ def render_generation_sections(fault_result: dict | None) -> dict | None:
         with st.container(key="monthly_generation_card"):
             html('<div class="module-title">▧ 月报生成</div>')
             current_result = get_monthly_generation_result(fault_result)
-            selected_action: tuple[str, ...] | None = None
-            button_rows = [MONTHLY_GENERATION_ACTIONS[:3], MONTHLY_GENERATION_ACTIONS[3:]]
-            for button_row in button_rows:
-                cols = st.columns(3, gap="small")
-                for col, (category, label) in zip(cols, button_row):
-                    with col:
-                        clicked = st.button(
-                            label,
-                            key=f"gen_monthly_{category}",
-                            disabled=fault_result is None,
-                            width="stretch",
-                        )
-                        if clicked:
-                            selected_action = DEFAULT_CATEGORIES if category == "all" else (category,)
-
-            if selected_action:
-                current_result = run_monthly_generation(fault_result, tuple(selected_action)) if fault_result else None
+            preview_col, generate_col = st.columns(2, gap="small")
+            with preview_col:
+                if st.button(
+                    "预览标准故障明细",
+                    key="preview_standard_faults",
+                    disabled=fault_result is None,
+                    width="stretch",
+                ):
+                    st.session_state["active_title_panel"] = "standard-fault-preview"
+                    st.rerun()
+            with generate_col:
+                if st.button(
+                    "一键生成全部月报文件",
+                    key="gen_monthly_all",
+                    disabled=fault_result is None,
+                    width="stretch",
+                ):
+                    current_result = run_monthly_generation(fault_result, DEFAULT_CATEGORIES) if fault_result else None
 
             render_generation_progress_box(current_result)
-            html('<div class="summary-title">生成预览</div>')
+            html('<div class="summary-title">生成摘要</div>')
             render_generation_stats(current_result)
             html('<div class="summary-title">生成结果</div>')
             render_open_result_folder_button(current_result)

@@ -94,28 +94,8 @@ def prepare_standard_faults(
     faults = pd.DataFrame(rows, columns=STANDARD_FAULT_COLUMNS)
     if not faults.empty:
         faults = faults.sort_values(["故障时间", "隧道名称", "源表行号"]).reset_index(drop=True)
-        faults = _apply_known_source_order(faults)
     return faults, issues
 
 
 def _get(row: pd.Series, column: str) -> Any:
     return row[column] if column in row.index and not pd.isna(row[column]) else None
-
-
-def _apply_known_source_order(faults: pd.DataFrame) -> pd.DataFrame:
-    """Apply stable source-order corrections observed in the authoritative workbook."""
-    order = [26, 15, 18, 17, 16, 11, 12, 13]
-    present = set(int(value) for value in faults["源表行号"].dropna().tolist())
-    if not set(order).issubset(present):
-        return faults.reset_index(drop=True)
-
-    rank = {source_row: index for index, source_row in enumerate(order)}
-    rows = faults.to_dict("records")
-    selected = [row for row in rows if int(row["源表行号"]) in rank]
-    if len(selected) != len(order):
-        return faults.reset_index(drop=True)
-
-    selected.sort(key=lambda row: rank[int(row["源表行号"])])
-    iterator = iter(selected)
-    reordered = [next(iterator) if int(row["源表行号"]) in rank else row for row in rows]
-    return pd.DataFrame(reordered, columns=faults.columns).reset_index(drop=True)

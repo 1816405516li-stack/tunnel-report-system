@@ -1,5 +1,6 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
+.\.venv\Scripts\python.exe scripts\clean_runtime_cache.py
 .\.venv\Scripts\python.exe -m streamlit run app.py
 pause

@@ -23,6 +23,8 @@ from generators.monthly_reports.common import (
     unmerge_rows,
 )
 
+HEADER_GAP = "\u3000" * 7
+
 
 def generate_total_report(
     run_dir: Path,
@@ -35,7 +37,7 @@ def generate_total_report(
     workbook = load_workbook(TEMPLATES["total"])
     sheet = workbook.active
     sheet.title = f"表3-1.机电设施故障月报表{month_number(month)}月"
-    sheet["A3"].value = f"养护机构： 永新东养护站               日    期： {report_date_text(month, spaced=True)}      "
+    sheet["A3"].value = f"养护机构： 永新东养护站{HEADER_GAP}日    期： {report_date_text(month, spaced=True)}      "
     apply_generated_font(sheet["A3"], 10)
     fill_table_rows(sheet, start_row=5, blank_row=6, data_count=len(data))
     unmerge_rows(sheet, 5, 5 + max(len(data), 1) - 1)

@@ -1314,11 +1314,7 @@ div[data-testid="stNumberInput"] button {
     box-shadow: none !important;
 }
 
-.st-key-gen_monthly_total .stButton > button,
-.st-key-gen_monthly_single_tunnel .stButton > button,
-.st-key-gen_monthly_daily .stButton > button,
-.st-key-gen_monthly_frequent .stButton > button,
-.st-key-gen_monthly_fault_record .stButton > button {
+.st-key-preview_standard_faults .stButton > button {
     min-height: 34px;
     background: rgba(255, 255, 255, 0.82);
     color: #374151;
@@ -1326,11 +1322,7 @@ div[data-testid="stNumberInput"] button {
     box-shadow: none;
 }
 
-.st-key-gen_monthly_total .stButton > button:hover,
-.st-key-gen_monthly_single_tunnel .stButton > button:hover,
-.st-key-gen_monthly_daily .stButton > button:hover,
-.st-key-gen_monthly_frequent .stButton > button:hover,
-.st-key-gen_monthly_fault_record .stButton > button:hover {
+.st-key-preview_standard_faults .stButton > button:hover {
     color: #374151;
 }
 

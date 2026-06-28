@@ -27,6 +27,8 @@ from generators.monthly_reports.common import (
     verify_workbook,
 )
 
+HEADER_GAP = "\u3000" * 7
+
 
 def generate_single_tunnel_reports(
     run_dir: Path,
@@ -58,7 +60,10 @@ def generate_single_tunnel_reports(
         sheet["A2"].value = f"隧道名称：  {display_name}  （上行洞/下行洞）{route_gap}路线名称：      修大高速        "
         sheet["A3"].value = f"隧道编码：      {tunnel_code}                路线编码：       S81            "
         year, month_number_text = month.split("-")
-        sheet["A4"].value = f"养护机构：         永新东养护站               日    期：  {int(year)}  年 {int(month_number_text)} 月 30 日       "
+        sheet["A4"].value = (
+            f"养护机构：         永新东养护站{HEADER_GAP}日    期：  "
+            f"{int(year)}  年 {int(month_number_text)} 月 30 日       "
+        )
         for coordinate in ("A2", "A3", "A4"):
             apply_generated_font(sheet[coordinate], 10)
         if tunnel_data.empty:
