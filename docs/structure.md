@@ -4,7 +4,21 @@
 
 ## 页面层
 
-`pages/` 负责网页交互，包括上传文件、选择月份、预览数据和触发生成任务。
+`app.py` 是 Streamlit 启动入口，实际运行 `pages/home.py`。
+
+`pages/home.py` 只负责首页组合和页面初始化。
+
+`pages/components/` 保存首页组件、弹窗路由、结果区块、状态管理和展示格式化函数。
+
+`pages/components/panels/` 保存关于系统、规则中心、系统日志、标准故障预览等弹窗内容。
+
+`pages/styles/` 保存页面 CSS。
+
+## 服务层
+
+`services/` 负责不依赖 Streamlit 的业务流程封装，例如上传维修单落盘、调用解析流程、调用月报生成流程。
+
+`utils/` 保存跨层可复用的小工具函数，例如安全文件名、上传文件大小和上传指纹。
 
 ## 核心层
 
@@ -22,7 +36,7 @@
 
 - `templates/monthly/`：Excel 空白模板。
 - `rules/`：各类报表生成规则。
-- `mappings/`：隧道、户号等映射表。
+- `mappings/`：隧道等映射表。
 
 ## 本地运行目录
 

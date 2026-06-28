@@ -2,26 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
-from datetime import datetime
 import os
 from pathlib import Path
 
 import streamlit as st
 
-from config.settings import OUTPUTS_DIR, RESOURCES_DIR, WORKSPACE_DIR
-from core.repair_orders import PipelineResult, load_tunnel_codes, process_device_repair_workbook
-from generators.monthly_report import (
-    CATEGORY_LABELS,
-    DEFAULT_CATEGORIES,
-    MonthlyGenerationError,
-    generate_monthly_reports,
-)
-
-
-UPLOAD_DIR = WORKSPACE_DIR / "uploads"
-PROCESSED_DIR = WORKSPACE_DIR / "processed"
-TUNNEL_MAPPING_PATH = RESOURCES_DIR / "mappings" / "tunnels.json"
+from generators.monthly_report import MonthlyGenerationError
+from services.monthly_workflow import generate_monthly_report_files
+from utils.files import format_file_size, safe_file_name, upload_size
 
 
 def html(block: str) -> None:
@@ -32,28 +20,12 @@ def show_placeholder(name: str) -> None:
     st.toast(f"{name}：功能开发中", icon="ℹ️")
 
 
-def native_button(label: str, key: str, toast: bool = True, width: str = "stretch") -> bool:
-    if st.button(label, key=key, width=width):
+def native_button(label: str, key: str, toast: bool = True, width: str = "stretch", disabled: bool = False) -> bool:
+    if st.button(label, key=key, width=width, disabled=disabled):
         if toast:
             show_placeholder(label)
         return True
     return False
-
-
-def process_uploaded_fault_file(uploaded_file) -> dict:
-    """Save uploaded Excel and run the real repair-order preparation pipeline."""
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    safe_name = Path(uploaded_file.name).name
-    source_path = UPLOAD_DIR / f"{datetime.now():%Y%m%d_%H%M%S}_{safe_name}"
-    source_path.write_bytes(uploaded_file.getvalue())
-    tunnel_codes = load_tunnel_codes(TUNNEL_MAPPING_PATH)
-    result: PipelineResult = process_device_repair_workbook(
-        source_path,
-        PROCESSED_DIR,
-        tunnel_codes=tunnel_codes,
-    )
-    st.session_state.pop("monthly_generation_result", None)
-    return asdict(result)
 
 
 def get_fault_result() -> dict | None:
@@ -65,55 +37,75 @@ def get_monthly_generation_result(fault_result: dict | None = None) -> dict | No
 
 
 def format_upload_size(uploaded_file) -> str:
-    size = getattr(uploaded_file, "size", None)
-    if size is None:
-        size = len(uploaded_file.getvalue())
-    if size >= 1024 * 1024:
-        return f"{size / 1024 / 1024:.2f} MB"
-    if size >= 1024:
-        return f"{size / 1024:.1f} KB"
-    return f"{size} B"
+    return format_file_size(upload_size(uploaded_file))
 
 
 def show_upload_feedback(uploaded_file, label: str, next_step: str = "请点击“开始解析”继续。") -> None:
     if not uploaded_file:
         return
-    safe_name = Path(uploaded_file.name).name
+    safe_name = safe_file_name(uploaded_file.name)
     st.success(f"{label}已选择：{safe_name}（{format_upload_size(uploaded_file)}）。{next_step}")
 
 
-def run_monthly_generation(fault_result: dict, categories: tuple[str, ...]) -> dict | None:
+def run_monthly_generation(
+    fault_result: dict,
+    categories: tuple[str, ...],
+    progress_container=None,
+) -> dict | None:
     """Generate monthly files and keep Streamlit progress tied to real tasks."""
-    progress_holder = st.empty()
-    message_holder = st.empty()
-    progress_holder.progress(0)
-    message_holder.caption("准备生成月报文件...")
+    progress_state = {
+        "completed": 0,
+        "total": 0,
+        "message": "准备生成月报文件...",
+        "status": "生成中",
+        "generated_at": "生成中",
+        "output_dir": "等待生成",
+    }
+
+    def render_live_progress() -> None:
+        if progress_container is None:
+            return
+        progress_container.empty()
+        with progress_container.container():
+            render_generation_progress_box(progress_state)
+
+    render_live_progress()
 
     def update_progress(completed: int, total: int, message: str) -> None:
         percent = int(completed / total * 100) if total else 0
-        progress_holder.progress(min(percent, 100))
-        message_holder.caption(f"{message}（{completed}/{total}）")
+        progress_state.update(
+            {
+                "completed": completed,
+                "total": total,
+                "message": f"{message}（{completed}/{total}）",
+                "status": "生成中" if percent < 100 else "生成完成",
+            }
+        )
+        render_live_progress()
 
     try:
-        result = generate_monthly_reports(
+        result = generate_monthly_report_files(
             fault_result,
-            OUTPUTS_DIR,
             categories=categories,
             progress_callback=update_progress,
-        ).to_dict()
+        )
     except MonthlyGenerationError as exc:
-        progress_holder.progress(0)
-        message_holder.empty()
+        progress_state.update({"message": str(exc), "status": "生成失败"})
+        render_live_progress()
         st.error(str(exc))
         return None
     except Exception as exc:  # pragma: no cover - Streamlit needs a readable fallback.
-        progress_holder.progress(0)
-        message_holder.empty()
-        st.error(f"月报生成失败：{exc}")
+        error_message = f"月报生成失败：{exc}"
+        progress_state.update({"message": error_message, "status": "生成失败"})
+        render_live_progress()
+        st.error(error_message)
         return None
 
     st.session_state["monthly_generation_result"] = result
-    st.success("月报文件已生成并通过打开校验。")
+    if progress_container is not None:
+        progress_container.empty()
+        with progress_container.container():
+            render_generation_progress_box(result)
     return result
 
 
@@ -123,7 +115,12 @@ def render_generation_progress_box(result: dict | None) -> None:
     percent = int(completed / total * 100) if total else 0
     generated_at = result.get("generated_at", "暂无") if result else "暂无"
     output_dir = result.get("output_dir", "等待生成") if result else "等待生成"
-    status = "生成完成" if percent == 100 and result else "等待生成"
+    status = result.get("status") if result else None
+    if not status:
+        status = "生成完成" if percent == 100 and result else "等待生成"
+    recent_label = result.get("message") if result else None
+    if not recent_label:
+        recent_label = generated_at
     html(
         f"""
         <div class="generation-box">
@@ -136,30 +133,11 @@ def render_generation_progress_box(result: dict | None) -> None:
             </div>
             <div class="bar" style="margin-top:7px;"><span style="width:{percent}%;"></span></div>
             <div style="color:#6b7280;font-size:14px;margin-top:7px;">已完成：{completed} / {total} 个生成任务</div>
-            <div style="color:#6b7280;font-size:13px;margin-top:4px;">最近生成：{generated_at}</div>
+            <div style="color:#6b7280;font-size:13px;margin-top:4px;">最近生成：{recent_label}</div>
             <div style="color:#6b7280;font-size:13px;margin-top:4px;word-break:break-all;">输出目录：{output_dir}</div>
         </div>
         """
     )
-
-
-def render_generation_stats(result: dict | None) -> None:
-    if not result:
-        html('<div style="color:#6b7280;font-size:14px;">暂无生成结果，请先点击上方生成按钮。</div>')
-        return
-    stats = result.get("category_stats") or {}
-    rows = []
-    for category in DEFAULT_CATEGORIES:
-        item = stats.get(category)
-        label = CATEGORY_LABELS[category]
-        if item:
-            rows.append(
-                f"<div class='dataset-item'><span class='check'>✓</span>"
-                f"<div>{label}：{item.get('file_count', 0)} 个文件，{item.get('row_count', 0)} 行数据</div></div>"
-            )
-        else:
-            rows.append(f"<div class='dataset-item'><span>•</span><div>{label}：未生成</div></div>")
-    html(f"<div class='dataset-list'>{''.join(rows)}</div>")
 
 
 def render_open_result_folder_button(result: dict | None) -> None:

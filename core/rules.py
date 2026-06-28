@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from config.settings import RESOURCES_DIR
 
-RULES_DIR = Path(__file__).resolve().parents[1] / "resources" / "rules"
+
+RULES_DIR = RESOURCES_DIR / "rules"
 
 RULE_FILES = {
     "monthly_fault_report": "monthly_fault_report.json",

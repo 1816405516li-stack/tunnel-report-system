@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from pages.rule_center import RULE_LABELS
+from pages.components.panels.rule_center import RULE_LABELS
 
 
 class RuleCenterLabelTests(unittest.TestCase):

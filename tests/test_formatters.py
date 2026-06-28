@@ -4,8 +4,8 @@ import unittest
 from unittest.mock import patch
 
 from generators.monthly_reports.common import generation_progress_message
-from pages.home import render_dataset_outputs
-from pages.home_formatters import date_range_metric_html, format_metric_date
+from pages.components.home_results import render_dataset_outputs
+from pages.components.home_formatters import date_range_metric_html, format_metric_date
 
 
 class HomeFormatterTests(unittest.TestCase):
@@ -52,7 +52,7 @@ class DatasetOutputRenderTests(unittest.TestCase):
         }
         captured: list[str] = []
 
-        with patch("pages.home.html", side_effect=captured.append):
+        with patch("pages.components.home_results.html", side_effect=captured.append):
             render_dataset_outputs(result)
 
         output = "".join(captured)

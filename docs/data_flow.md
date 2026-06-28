@@ -14,7 +14,7 @@
 
 1. 从 `resources/templates/monthly/` 读取长期复用模板。
 2. 从 `resources/rules/` 读取报表规则。
-3. 从 `resources/mappings/` 读取隧道、户号等映射。
+3. 从 `resources/mappings/` 读取隧道等映射。
 
 ## 本地运行数据
 
